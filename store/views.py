@@ -12,8 +12,14 @@ from store.models import Product, Collection, OrderItem, Review
 
 
 class ProductViewSet(ModelViewSet):
-    queryset = Product.objects.all()
     serializer_class = ProductsSerializer
+
+    def get_queryset(self):
+        queryset = Product.objects.all()
+        collection_id = self.request.query_params.get('collection_id')
+        if collection_id is not None:
+            queryset = queryset.filter(collection_id=collection_id)
+        return queryset
 
     def get_serializer_context(self):
         return {'request': self.request}
@@ -29,19 +35,21 @@ class CollectionViewSet(ModelViewSet):
         products_count=Count('products')).all()
     serializer_class = CollectionSerializer
 
-    # http_method_names = ['post', 'get']
-
-    # def destroy(self, request, *args, **kwargs):
-    #     if Collection.objects.filter(featured_product=kwargs['pk']).count() > 0:
-    #         return Response({'error': 'Collection cannot be deleted because it includes one or more products.'})
-    #     return super().destroy(request, *args, **kwargs)
-
     def delete(self, request, pk):
         collection = get_object_or_404(Collection, pk=pk)
         if collection.products.count() > 0:
             return Response({'error': 'Collection cannot be deleted because it includes one or more products.'})
         collection.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    """
+        # http_method_names = ['post', 'get']
+
+        # def destroy(self, request, *args, **kwargs):
+        #     if Collection.objects.filter(featured_product=kwargs['pk']).count() > 0:
+        #         return Response({'error': 'Collection cannot be deleted because it includes one or more products.'})
+        #     return super().destroy(request, *args, **kwargs)
+    """
 
 
 class ReviewViewSet(ModelViewSet):
