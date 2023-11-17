@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from decimal import Decimal
-from store.models import Product, Collection, Review, Cart
+from store.models import Product, Collection, Review, Cart, CartItem
 
 
 class CollectionSerializer(serializers.ModelSerializer):
@@ -32,9 +32,73 @@ class ReviewSerializer(serializers.ModelSerializer):
         return Review.objects.create(product_id=product_id, **validated_data)
 
 
-class CartSerializer(serializers.ModelSerializer):
-   id = serializers.UUIDField(read_only=True)
+class SimpleProductSerializer(serializers.ModelSerializer):
+    total_price = serializers.SerializerMethodField()
 
-   class Meta:
-       model = Cart
-       fields = ['id']
+    def get_total_price(self, cart_item: CartItem):
+        # function pattern name is gt_object_name
+        return cart_item.quantity * cart_item.product.unit_price
+
+    class Meta:
+        model = Product
+        fields = ['id', 'title', 'unit_price', 'total_price']
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    product = SimpleProductSerializer()
+
+    class Meta:
+        model = CartItem
+        fields = ['id', 'product', 'quantity']
+
+
+class CartSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(read_only=True)
+    items = CartItemSerializer(many=True, read_only=True)
+    total_price = serializers.SerializerMethodField()
+
+    def get_total_price(self, cart: Cart):
+        # now we write list comprehension: [item for item in collection]
+        return sum([item.quantity * item.product.unit_price for item in cart.items.all()])
+
+    class Meta:
+        model = Cart
+        fields = ['id', 'items', 'total_price']
+
+
+class AddCartItemSerializer(serializers.ModelSerializer):
+    # cause product_id generate by db, we define it to show on client.
+    product_id = serializers.IntegerField()
+
+    # manage error of invalid post
+    def validate_product_id(self, value):
+        if not Product.objects.filter(pk=value).exists():
+            raise serializers.ValidationError('No product with the ')
+        return value
+
+    def save(self, **kwargs):
+        cart_id = self.context['cart_id']
+        product_id = self.validated_data['product_id']
+        quantity = self.validated_data['quantity']
+        try:
+            # Update an existing item
+            cart_item = CartItem.objects.get(cart_id=cart_id, product_id=product_id)
+            cart_item.quantity += quantity
+            cart_item.save()
+            self.instance = cart_item
+            # we use instance because on the others function of
+            # save() method, cart_item is using.
+        except CartItem.DoesNotExist:
+            # Create a new item
+            self.instance = CartItem.objects.create(cart_id=cart_id, **self.validated_data)
+        return self.instance
+
+    class Meta:
+        model = CartItem
+        fields = ['id', 'product_id', 'quantity']
+
+
+class UpdateCartItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CartItem
+        fields = ['quantity']
