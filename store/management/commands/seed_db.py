@@ -5,6 +5,7 @@ import os
 
 
 class Command(BaseCommand):
+    # For applying seed data to database
     help = 'Populates the database with collections and products'
 
     def handle(self, *args, **options):
