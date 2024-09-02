@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'django_filters',
     'rest_framework',
     'djoser',
@@ -64,6 +65,11 @@ INTERNAL_IPS = [
     # ...
     '127.0.0.1',
     # ...
+]
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:8001',
+    'http://127.0.0.1:8001'
 ]
 
 ROOT_URLCONF = 'storefront.urls'
