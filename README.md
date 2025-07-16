@@ -76,6 +76,3 @@ Django Admin Panel:
 
 🛵 This project is currently in **active development** and is open for contributions. Feel free to submit issues or pull requests.
 
-## License
-
-This project is open-source and licensed under the **MIT License**.
